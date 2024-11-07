@@ -1,0 +1,8 @@
+shiny
+shinylive
+matplotlib
+plotly
+pandas
+requests
+tqdm
+datetime
