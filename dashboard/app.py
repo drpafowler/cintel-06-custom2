@@ -5,11 +5,9 @@ import seaborn as sns
 import pandas as pd
 import plotly.express as px
 import matplotlib.pyplot as plt
-import os
-from datetime import datetime
 from shiny import reactive
 from shiny.express import input, render, ui
-from shinywidgets import render_widget  
+from shinywidgets import render_widget
 
 @reactive.calc
 def url():
@@ -102,9 +100,17 @@ with ui.layout_column_wrap(width=1 / 2):
             input_currency_name = currency_dict[input_currency]
             output_currency_name = currency_dict[output_currency]
             return f"{amount} {input_currency_name} is equal to {conversion:.4f} {output_currency_name}"
-
+    
     with ui.card():
-        "Currency Symbols"
+        "All Exchange Rates"
+        @render.data_frame
+        async def table():
+            df = exchange_rate_df()
+            df.style.set_table_styles([{'selector': 'th', 'props': [('font-size', '0.75em')]}, {'selector': 'td', 'props': [('font-size', '0.75em')]}])
+            return df
+    
+    with ui.value_box():
+        "Input Currency Information"
         @render.text
         def currency_symbol():
             currency_data = {'USD': '$', 'EUR': '€', 'AED': 'د.إ', 'AFN': '؋', 'ALL': 'L', 'AMD': '֏', 'ANG': 'ƒ', 'AOA': 'Kz', 'ARS': '$', 'AUD': '$', 'AWG': 'ƒ', 'AZN': '₼', 'BAM': 'KM', 'BBD': '$', 'BDT': '৳', 'BGN': 'лв.', 'BHD': '.د.ب', 'BIF': 'Fr', 'BMD': '$', 'BND': '$', 'BOB': 'Bs.', 'BRL': 'R$', 'BSD': '$', 'BTN': 'Nu.', 'BWP': 'P', 'BYN': 'Br', 'BZD': '$', 'CAD': '$', 'CDF': 'Fr', 'CHF': 'Fr.', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'CUP': '$', 'CVE': '$', 'CZK': 'Kč', 'DJF': 'Fr', 'DKK': 'kr', 'DOP': 'RD$', 'DZD': 'د.ج', 'EGP': '£', 'ERN': 'Nfk', 'ETB': 'Br', 'FJD': '$', 'FKP': '£', 'GBP': '£', 'GEL': '₾', 'GHS': '₵', 'GIP': '£', 'GMD': 'D', 'GNF': 'Fr', 'GTQ': 'Q', 'GYD': '$', 'HKD': '$', 'HNL': 'L', 'HRK': 'kn', 'HTG': 'G', 'HUF': 'Ft', 'IDR': 'Rp', 'ILS': '₪', 'INR': '₹', 'IQD': 'ع.د', 'IRR': '﷼', 'ISK': 'kr', 'JMD': '$', 'JOD': 'د.ا', 'JPY': '¥', 'KES': 'Sh', 'KGS': 'с', 'KHR': '៛', 'KMF': 'Fr', 'KPW': '₩', 'KRW': '₩', 'KWD': 'د.ك', 'KYD': '$', 'KZT': '₸', 'LAK': '₭', 'LBP': 'ل.ل', 'LKR': 'Rs', 'LRD': '$', 'LSL': 'L', 'LYD': 'ل.د', 'MAD': 'د.م.', 'MDL': 'L', 'MGA': 'Ar', 'MKD': 'ден', 'MMK': 'Ks', 'MNT': '₮', 'MOP': 'MOP$', 'MRU': 'UM', 'MUR': '₨', 'MVR': '.ރ', 'MWK': 'MK', 'MXN': '$', 'MYR': 'RM', 'MZN': 'MT', 'NAD': '$', 'NGN': '₦', 'NIO': 'C$', 'NOK': 'kr', 'NPR': 'रू', 'NZD': '$', 'OMR': 'ر.ع.', 'PAB': 'B/.', 'PEN': 'S/.', 'PGK': 'K', 'PHP': '₱', 'PKR': '₨', 'PLN': 'zł', 'PYG': '₲', 'QAR': 'ر.ق', 'RON': 'lei', 'RSD': 'дин.', 'RUB': '₽', 'RWF': 'Fr', 'SAR': '﷼', 'SBD': '$', 'SCR': '₨', 'SDG': 'ج.س.', 'SEK': 'kr', 'SGD': '$', 'SHP': '£', 'SLL': 'Le', 'SOS': 'Sh', 'SRD': '$', 'SSP': '£', 'STN': 'Db', 'SYP': '£', 'SZL': 'L', 'THB': '฿', 'TJS': 'с.', 'TMT': 'm.', 'TND': 'د.ت', 'TOP': 'T$', 'TRY': '₺', 'TTD': '$', 'TWD': '$', 'TZS': 'Sh', 'UAH': '₴', 'UGX': 'Sh', 'UYU': '$', 'UZS': 'Sʻ', 'VES': 'Bs.', 'VND': '₫', 'VUV': 'Vt', 'WST': 'T', 'XAF': 'Fr', 'XCD': '$', 'XOF': 'Fr', 'XPF': '₣', 'YER': '﷼', 'ZAR': 'R', 'ZMW': 'ZK', 'ZWL': '$'}
@@ -113,6 +119,9 @@ with ui.layout_column_wrap(width=1 / 2):
             input_currency_name = currency_dict[input_currency]
             symbol = currency_data.get(input_currency, "N/A")
             return f"The symbol for {input_currency_name} is: {symbol}"
+    
+    with ui.value_box():
+        "Output Currency Information"
         @render.text
         def currency_symbol2():
             currency_data = {'USD': '$', 'EUR': '€', 'AED': 'د.إ', 'AFN': '؋', 'ALL': 'L', 'AMD': '֏', 'ANG': 'ƒ', 'AOA': 'Kz', 'ARS': '$', 'AUD': '$', 'AWG': 'ƒ', 'AZN': '₼', 'BAM': 'KM', 'BBD': '$', 'BDT': '৳', 'BGN': 'лв.', 'BHD': '.د.ب', 'BIF': 'Fr', 'BMD': '$', 'BND': '$', 'BOB': 'Bs.', 'BRL': 'R$', 'BSD': '$', 'BTN': 'Nu.', 'BWP': 'P', 'BYN': 'Br', 'BZD': '$', 'CAD': '$', 'CDF': 'Fr', 'CHF': 'Fr.', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'CUP': '$', 'CVE': '$', 'CZK': 'Kč', 'DJF': 'Fr', 'DKK': 'kr', 'DOP': 'RD$', 'DZD': 'د.ج', 'EGP': '£', 'ERN': 'Nfk', 'ETB': 'Br', 'FJD': '$', 'FKP': '£', 'GBP': '£', 'GEL': '₾', 'GHS': '₵', 'GIP': '£', 'GMD': 'D', 'GNF': 'Fr', 'GTQ': 'Q', 'GYD': '$', 'HKD': '$', 'HNL': 'L', 'HRK': 'kn', 'HTG': 'G', 'HUF': 'Ft', 'IDR': 'Rp', 'ILS': '₪', 'INR': '₹', 'IQD': 'ع.د', 'IRR': '﷼', 'ISK': 'kr', 'JMD': '$', 'JOD': 'د.ا', 'JPY': '¥', 'KES': 'Sh', 'KGS': 'с', 'KHR': '៛', 'KMF': 'Fr', 'KPW': '₩', 'KRW': '₩', 'KWD': 'د.ك', 'KYD': '$', 'KZT': '₸', 'LAK': '₭', 'LBP': 'ل.ل', 'LKR': 'Rs', 'LRD': '$', 'LSL': 'L', 'LYD': 'ل.د', 'MAD': 'د.م.', 'MDL': 'L', 'MGA': 'Ar', 'MKD': 'ден', 'MMK': 'Ks', 'MNT': '₮', 'MOP': 'MOP$', 'MRU': 'UM', 'MUR': '₨', 'MVR': '.ރ', 'MWK': 'MK', 'MXN': '$', 'MYR': 'RM', 'MZN': 'MT', 'NAD': '$', 'NGN': '₦', 'NIO': 'C$', 'NOK': 'kr', 'NPR': 'रू', 'NZD': '$', 'OMR': 'ر.ع.', 'PAB': 'B/.', 'PEN': 'S/.', 'PGK': 'K', 'PHP': '₱', 'PKR': '₨', 'PLN': 'zł', 'PYG': '₲', 'QAR': 'ر.ق', 'RON': 'lei', 'RSD': 'дин.', 'RUB': '₽', 'RWF': 'Fr', 'SAR': '﷼', 'SBD': '$', 'SCR': '₨', 'SDG': 'ج.س.', 'SEK': 'kr', 'SGD': '$', 'SHP': '£', 'SLL': 'Le', 'SOS': 'Sh', 'SRD': '$', 'SSP': '£', 'STN': 'Db', 'SYP': '£', 'SZL': 'L', 'THB': '฿', 'TJS': 'с.', 'TMT': 'm.', 'TND': 'د.ت', 'TOP': 'T$', 'TRY': '₺', 'TTD': '$', 'TWD': '$', 'TZS': 'Sh', 'UAH': '₴', 'UGX': 'Sh', 'USD': 'United States Dollar', 'UYU': '$', 'UZS': "Uzbekistani So'm", 'VES': 'Bs.', 'VND': '₫', 'VUV': 'Vt', 'WST': 'T', 'XAF': 'Fr', 'XCD': '$', 'XOF': 'Fr', 'XPF': '₣', 'YER': '﷼', 'ZAR': 'R', 'ZMW': 'ZK', 'ZWL': '$'}
@@ -121,14 +130,6 @@ with ui.layout_column_wrap(width=1 / 2):
             output_currency_name = currency_dict[output_currency]
             symbol = currency_data.get(output_currency, "N/A")
             return f"The symbol for {output_currency_name} is: {symbol}"
-    with ui.card():
-        "All Exchange Rates"
-        @render.data_frame
-        async def table():
-            df = exchange_rate_df()
-            df.style.set_table_styles([{'selector': 'th', 'props': [('font-size', '0.75em')]}, {'selector': 'td', 'props': [('font-size', '0.75em')]}])
-            return df
-    with ui.card():
-        "Card 4"
-
+with ui.card():
+    "Spend your money wisely!"
 

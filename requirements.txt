@@ -4,5 +4,4 @@ matplotlib
 plotly
 pandas
 requests
-tqdm
-datetime
+json
