@@ -61,8 +61,9 @@ with ui.sidebar(bg="#f8f8f8"):
     )
     ui.a("Currency Symbols Source", href="https://gist.github.com/sgraaf/21d5919940844c9f0c12f147ed45953d", target="_blank")
     ui.a("Exchange Rate API", href="https://www.exchangerate-api.com/", target="_blank")
+    ui.a("Country Codes List", href="https://gist.github.com/tiagodealmeida/0b97ccf117252d742dddf098bc6cc58a")
 
-with ui.layout_column_wrap(width=1 / 2): 
+with ui.layout_columns(max_height=400): 
     with ui.value_box():
         "Conversion"
         @render.text
@@ -110,14 +111,13 @@ with ui.layout_column_wrap(width=1 / 2):
             symbol = currency_data.get(output_currency, "N/A")
             return f"The symbol for {output_currency_name} is: {symbol}"
 with ui.card():
-    "Spend your money wisely!"
+    "Here's where to spend your money!"
     @render_widget
     def exchange_rate_map():
         df = exchange_rate_df()
-        currency_to_country = {
-            'USD': 'USA', 'EUR': 'EU', 'THB': 'THA', # Add more mappings as needed
-            # Add all necessary mappings here
-        }
+        currency_to_country = {'EUR': 'YT', 'AED': 'AE', 'AFN': 'AF', 'XCD': 'VC', 'ALL': 'AL', 'AMD': 'AM', 'AOA': 'AO', '': 'AQ', 'ARS': 'AR', 'USD': 'VI', 'AUD': 'TV', 'AWG': 'AW', 'AZN': 'AZ', 'BAM': 'BA', 'BBD': 'BB', 'BDT': 'BD', 'XOF': 'TG', 'BGN': 'BG', 'BHD': 'BH', 'BIF': 'BI', 'BMD': 'BM', 'BND': 'BN', 'BOB': 'BO', 'BRL': 'BR', 'BSD': 'BS', 'BTN': 'BT', 'NOK': 'SJ', 'BWP': 'BW', 'BYR': 'BY', 'BZD': 'BZ', 'CAD': 'CA', 'CDF': 'CD', 'XAF': 'TD', 'CHF': 'LI', 'NZD': 'TK', 'CLP': 'CL', 'CNY': 'CN', 'COP': 'CO', 'CRC': 'CR', 'CUP': 'CU', 'CVE': 'CV', 'ANG': 'SX', 'CZK': 'CZ', 'DJF': 'DJ', 'DKK': 'GL', 'DOP': 'DO', 'DZD': 'DZ', 'EGP': 'EG', 'MAD': 'MA', 'ERN': 'ER', 'ETB': 'ET', 'FJD': 'FJ', 'FKP': 'FK', 'GBP': 'JE', 'GEL': 'GE', 'GHS': 'GH', 'GIP': 'GI', 'GMD': 'GM', 'GNF': 'GN', 'GTQ': 'GT', 'GYD': 'GY', 'HKD': 'HK', 'HNL': 'HN', 'HRK': 'HR', 'HTG': 'HT', 'HUF': 'HU', 'IDR': 'ID', 'ILS': 'PS', 'INR': 'IN', 'IQD': 'IQ', 'IRR': 'IR', 'ISK': 'IS', 'JMD': 'JM', 'JOD': 'JO', 'JPY': 'JP', 'KES': 'KE', 'KGS': 'KG', 'KHR': 'KH', 'KMF': 'KM', 'KPW': 'KP', 'KRW': 'KR', 'KWD': 'KW', 'KYD': 'KY', 'KZT': 'KZ', 'LAK': 'LA', 'LBP': 'LB', 'LKR': 'LK', 'LRD': 'LR', 'LSL': 'LS', 'LYD': 'LY', 'MDL': 'MD', 'MGA': 'MG', 'MKD': 'MK', 'MMK': 'MM', 'MNT': 'MN', 'MOP': 'MO', 'MRO': 'MR', 'MUR': 'MU', 'MVR': 'MV', 'MWK': 'MW', 'MXN': 'MX', 'MYR': 'MY', 'MZN': 'MZ', 'NAD': 'NA', 'XPF': 'WF', 'NGN': 'NG', 'NIO': 'NI', 'NPR': 'NP', 'OMR': 'OM', 'PAB': 'PA', 'PEN': 'PE', 'PGK': 'PG', 'PHP': 'PH', 'PKR': 'PK', 'PLN': 'PL', 'PYG': 'PY', 'QAR': 'QA', 'RON': 'RO', 'RSD': 'RS', 'RUB': 'RU', 'RWF': 'RW', 'SAR': 'SA', 'SBD': 'SB', 'SCR': 'SC', 'SDG': 'SD', 'SEK': 'SE', 'SGD': 'SG', 'SHP': 'SH', 'SLL': 'SL', 'SOS': 'SO', 'SRD': 'SR', 'SSP': 'SS', 'STD': 'ST', 'SYP': 'SY', 'SZL': 'SZ', 'THB': 'TH', 'TJS': 'TJ', 'TMT': 'TM', 'TND': 'TN', 'TOP': 'TO', 'TRY': 'TR', 'TTD': 'TT', 'TWD': 'TW', 'TZS': 'TZ', 'UAH': 'UA', 'UGX': 'UG', 'UYU': 'UY', 'UZS': 'UZ', 'VEF': 'VE', 'VND': 'VN', 'VUV': 'VU', 'WST': 'WS', 'YER': 'YE', 'ZAR': 'ZA', 'ZMW': 'ZM', 'ZWL': 'ZW'}
+        map_currency = input.output_currency()
+        Country = currency_to_country[map_currency]
         df['Country'] = df['Currency'].map(currency_to_country)
         df = df.dropna(subset=['Country'])
         fig = px.choropleth(
@@ -128,3 +128,5 @@ with ui.card():
             projection="equirectangular"
         )
         return fig
+
+
