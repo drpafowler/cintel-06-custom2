@@ -31,12 +31,6 @@ def save_exchange_rate():
             file.write(json.dumps(exrate))
     return exrate
 
-# Load Historical Data
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# historical_data_path = os.path.join(current_dir, "historical_rates_fixed.csv")
-# historical_df = pd.read_csv(historical_data_path)
-# historical_df['Date'] = pd.to_datetime(historical_df['Date'])
-
 @reactive.calc
 def exchange_rate_df():
     filename = "exchange_rate.txt"
@@ -45,27 +39,12 @@ def exchange_rate_df():
     df = pd.DataFrame(list(exrate.items()), columns=['Currency', 'Rate'])
     return df
 
-@reactive.calc
-def historical_rates_df():
-    filename = "historical_rates_fixed.csv"
-    df = pd.read_csv(filename)
-    return df
-
-# @reactive.calc()
-# def filtered_historical_df():
-    # Get the selected time interval from the input
-#    selected_interval = input.daterange()
-    # Filter the historical_df based on the selected interval
-#    start_date, end_date = selected_interval
-#    filtered_df = historical_df[(historical_df['Date'] >= start_date) & (historical_df['Date'] <= end_date)]
-#    return filtered_df
-
 ui.page_opts(
     title="Philip's Simple Currency Conversion Dashboard",
     fillable=True,    
 )
 
-with ui.sidebar(bg="#f8f8f8", width=400):  
+with ui.sidebar(bg="#f8f8f8"):  
     "Inputs" 
     ui.input_numeric("number", "Amount of Input Currency", value=1)
     ui.input_select(
@@ -132,4 +111,20 @@ with ui.layout_column_wrap(width=1 / 2):
             return f"The symbol for {output_currency_name} is: {symbol}"
 with ui.card():
     "Spend your money wisely!"
-
+    @render_widget
+    def exchange_rate_map():
+        df = exchange_rate_df()
+        currency_to_country = {
+            'USD': 'USA', 'EUR': 'EU', 'THB': 'THA', # Add more mappings as needed
+            # Add all necessary mappings here
+        }
+        df['Country'] = df['Currency'].map(currency_to_country)
+        df = df.dropna(subset=['Country'])
+        fig = px.choropleth(
+            df,
+            locations='Country',
+            locationmode='ISO-3',
+            title="Where to spend your money",
+            projection="equirectangular"
+        )
+        return fig
