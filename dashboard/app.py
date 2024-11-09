@@ -9,10 +9,12 @@ from shiny import reactive
 from shiny.express import input, render, ui
 from shinywidgets import render_widget
 
+# create a function to get the exchange rate API URL
 @reactive.calc
 def url():
     return f"https://v6.exchangerate-api.com/v6/e4422bdb5030904fad352315/latest/USD"
 
+# fetch the exchange rate dictionary from the API
 @reactive.calc
 def fetch_exchange_rate():
     response = requests.get(url())
@@ -22,6 +24,7 @@ def fetch_exchange_rate():
     else:
         return None
 
+# save the exchange rate dictionary to a file
 @reactive.calc
 def save_exchange_rate():
     exrate = fetch_exchange_rate()
@@ -31,6 +34,7 @@ def save_exchange_rate():
             file.write(json.dumps(exrate))
     return exrate
 
+# create a dataframe from the exchange rate dictionary
 @reactive.calc
 def exchange_rate_df():
     filename = "exchange_rate.txt"
@@ -39,11 +43,20 @@ def exchange_rate_df():
     df = pd.DataFrame(list(exrate.items()), columns=['Currency', 'Rate'])
     return df
 
+# add another column to the dataframe using the currency to country dictionary
+currency_to_country = {'EUR': 'YT', 'AED': 'AE', 'AFN': 'AF', 'XCD': 'VC', 'ALL': 'AL', 'AMD': 'AM', 'AOA': 'AO', '': 'AQ', 'ARS': 'AR', 'USD': 'VI', 'AUD': 'TV', 'AWG': 'AW', 'AZN': 'AZ', 'BAM': 'BA', 'BBD': 'BB', 'BDT': 'BD', 'XOF': 'TG', 'BGN': 'BG', 'BHD': 'BH', 'BIF': 'BI', 'BMD': 'BM', 'BND': 'BN', 'BOB': 'BO', 'BRL': 'BR', 'BSD': 'BS', 'BTN': 'BT', 'NOK': 'SJ', 'BWP': 'BW', 'BYR': 'BY', 'BZD': 'BZ', 'CAD': 'CA', 'CDF': 'CD', 'XAF': 'TD', 'CHF': 'LI', 'NZD': 'TK', 'CLP': 'CL', 'CNY': 'CN', 'COP': 'CO', 'CRC': 'CR', 'CUP': 'CU', 'CVE': 'CV', 'ANG': 'SX', 'CZK': 'CZ', 'DJF': 'DJ', 'DKK': 'GL', 'DOP': 'DO', 'DZD': 'DZ', 'EGP': 'EG', 'MAD': 'MA', 'ERN': 'ER', 'ETB': 'ET', 'FJD': 'FJ', 'FKP': 'FK', 'GBP': 'JE', 'GEL': 'GE', 'GHS': 'GH', 'GIP': 'GI', 'GMD': 'GM', 'GNF': 'GN', 'GTQ': 'GT', 'GYD': 'GY', 'HKD': 'HK', 'HNL': 'HN', 'HRK': 'HR', 'HTG': 'HT', 'HUF': 'HU', 'IDR': 'ID', 'ILS': 'PS', 'INR': 'IN', 'IQD': 'IQ', 'IRR': 'IR', 'ISK': 'IS', 'JMD': 'JM', 'JOD': 'JO', 'JPY': 'JP', 'KES': 'KE', 'KGS': 'KG', 'KHR': 'KH', 'KMF': 'KM', 'KPW': 'KP', 'KRW': 'KR', 'KWD': 'KW', 'KYD': 'KY', 'KZT': 'KZ', 'LAK': 'LA', 'LBP': 'LB', 'LKR': 'LK', 'LRD': 'LR', 'LSL': 'LS', 'LYD': 'LY', 'MDL': 'MD', 'MGA': 'MG', 'MKD': 'MK', 'MMK': 'MM', 'MNT': 'MN', 'MOP': 'MO', 'MRO': 'MR', 'MUR': 'MU', 'MVR': 'MV', 'MWK': 'MW', 'MXN': 'MX', 'MYR': 'MY', 'MZN': 'MZ', 'NAD': 'NA', 'XPF': 'WF', 'NGN': 'NG', 'NIO': 'NI', 'NPR': 'NP', 'OMR': 'OM', 'PAB': 'PA', 'PEN': 'PE', 'PGK': 'PG', 'PHP': 'PH', 'PKR': 'PK', 'PLN': 'PL', 'PYG': 'PY', 'QAR': 'QA', 'RON': 'RO', 'RSD': 'RS', 'RUB': 'RU', 'RWF': 'RW', 'SAR': 'SA', 'SBD': 'SB', 'SCR': 'SC', 'SDG': 'SD', 'SEK': 'SE', 'SGD': 'SG', 'SHP': 'SH', 'SLL': 'SL', 'SOS': 'SO', 'SRD': 'SR', 'SSP': 'SS', 'STD': 'ST', 'SYP': 'SY', 'SZL': 'SZ', 'THB': 'TH', 'TJS': 'TJ', 'TMT': 'TM', 'TND': 'TN', 'TOP': 'TO', 'TRY': 'TR', 'TTD': 'TT', 'TWD': 'TW', 'TZS': 'TZ', 'UAH': 'UA', 'UGX': 'UG', 'UYU': 'UY', 'UZS': 'UZ', 'VEF': 'VE', 'VND': 'VN', 'VUV': 'VU', 'WST': 'WS', 'YER': 'YE', 'ZAR': 'ZA', 'ZMW': 'ZM', 'ZWL': 'ZW'}
+@reactive.calc
+def exchange_rate_df_with_country():
+    df = exchange_rate_df()
+    df['Country'] = df['Currency'].map(currency_to_country)
+    return df
+
 ui.page_opts(
     title="Philip's Simple Currency Conversion Dashboard",
     fillable=True,    
 )
 
+# create the dashboard layout
 with ui.sidebar(bg="#f8f8f8"):  
     "Inputs" 
     ui.input_numeric("number", "Amount of Input Currency", value=1)
@@ -63,6 +76,7 @@ with ui.sidebar(bg="#f8f8f8"):
     ui.a("Exchange Rate API", href="https://www.exchangerate-api.com/", target="_blank")
     ui.a("Country Codes List", href="https://gist.github.com/tiagodealmeida/0b97ccf117252d742dddf098bc6cc58a")
 
+# create the dashboard layout
 with ui.layout_columns(max_height=400): 
     with ui.value_box():
         "Conversion"
@@ -110,23 +124,7 @@ with ui.layout_columns(max_height=400):
             output_currency_name = currency_dict[output_currency]
             symbol = currency_data.get(output_currency, "N/A")
             return f"The symbol for {output_currency_name} is: {symbol}"
-with ui.card():
-    "Here's where to spend your money!"
-    @render_widget
-    def exchange_rate_map():
-        df = exchange_rate_df()
-        currency_to_country = {'EUR': 'YT', 'AED': 'AE', 'AFN': 'AF', 'XCD': 'VC', 'ALL': 'AL', 'AMD': 'AM', 'AOA': 'AO', '': 'AQ', 'ARS': 'AR', 'USD': 'VI', 'AUD': 'TV', 'AWG': 'AW', 'AZN': 'AZ', 'BAM': 'BA', 'BBD': 'BB', 'BDT': 'BD', 'XOF': 'TG', 'BGN': 'BG', 'BHD': 'BH', 'BIF': 'BI', 'BMD': 'BM', 'BND': 'BN', 'BOB': 'BO', 'BRL': 'BR', 'BSD': 'BS', 'BTN': 'BT', 'NOK': 'SJ', 'BWP': 'BW', 'BYR': 'BY', 'BZD': 'BZ', 'CAD': 'CA', 'CDF': 'CD', 'XAF': 'TD', 'CHF': 'LI', 'NZD': 'TK', 'CLP': 'CL', 'CNY': 'CN', 'COP': 'CO', 'CRC': 'CR', 'CUP': 'CU', 'CVE': 'CV', 'ANG': 'SX', 'CZK': 'CZ', 'DJF': 'DJ', 'DKK': 'GL', 'DOP': 'DO', 'DZD': 'DZ', 'EGP': 'EG', 'MAD': 'MA', 'ERN': 'ER', 'ETB': 'ET', 'FJD': 'FJ', 'FKP': 'FK', 'GBP': 'JE', 'GEL': 'GE', 'GHS': 'GH', 'GIP': 'GI', 'GMD': 'GM', 'GNF': 'GN', 'GTQ': 'GT', 'GYD': 'GY', 'HKD': 'HK', 'HNL': 'HN', 'HRK': 'HR', 'HTG': 'HT', 'HUF': 'HU', 'IDR': 'ID', 'ILS': 'PS', 'INR': 'IN', 'IQD': 'IQ', 'IRR': 'IR', 'ISK': 'IS', 'JMD': 'JM', 'JOD': 'JO', 'JPY': 'JP', 'KES': 'KE', 'KGS': 'KG', 'KHR': 'KH', 'KMF': 'KM', 'KPW': 'KP', 'KRW': 'KR', 'KWD': 'KW', 'KYD': 'KY', 'KZT': 'KZ', 'LAK': 'LA', 'LBP': 'LB', 'LKR': 'LK', 'LRD': 'LR', 'LSL': 'LS', 'LYD': 'LY', 'MDL': 'MD', 'MGA': 'MG', 'MKD': 'MK', 'MMK': 'MM', 'MNT': 'MN', 'MOP': 'MO', 'MRO': 'MR', 'MUR': 'MU', 'MVR': 'MV', 'MWK': 'MW', 'MXN': 'MX', 'MYR': 'MY', 'MZN': 'MZ', 'NAD': 'NA', 'XPF': 'WF', 'NGN': 'NG', 'NIO': 'NI', 'NPR': 'NP', 'OMR': 'OM', 'PAB': 'PA', 'PEN': 'PE', 'PGK': 'PG', 'PHP': 'PH', 'PKR': 'PK', 'PLN': 'PL', 'PYG': 'PY', 'QAR': 'QA', 'RON': 'RO', 'RSD': 'RS', 'RUB': 'RU', 'RWF': 'RW', 'SAR': 'SA', 'SBD': 'SB', 'SCR': 'SC', 'SDG': 'SD', 'SEK': 'SE', 'SGD': 'SG', 'SHP': 'SH', 'SLL': 'SL', 'SOS': 'SO', 'SRD': 'SR', 'SSP': 'SS', 'STD': 'ST', 'SYP': 'SY', 'SZL': 'SZ', 'THB': 'TH', 'TJS': 'TJ', 'TMT': 'TM', 'TND': 'TN', 'TOP': 'TO', 'TRY': 'TR', 'TTD': 'TT', 'TWD': 'TW', 'TZS': 'TZ', 'UAH': 'UA', 'UGX': 'UG', 'UYU': 'UY', 'UZS': 'UZ', 'VEF': 'VE', 'VND': 'VN', 'VUV': 'VU', 'WST': 'WS', 'YER': 'YE', 'ZAR': 'ZA', 'ZMW': 'ZM', 'ZWL': 'ZW'}
-        map_currency = input.output_currency()
-        Country = currency_to_country[map_currency]
-        df['Country'] = df['Currency'].map(currency_to_country)
-        df = df.dropna(subset=['Country'])
-        fig = px.choropleth(
-            df,
-            locations='Country',
-            locationmode='ISO-3',
-            title="Where to spend your money",
-            projection="equirectangular"
-        )
-        return fig
+
+
 
 
