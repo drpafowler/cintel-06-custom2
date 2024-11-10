@@ -1,62 +1,42 @@
-
-import requests
-import json
-import seaborn as sns
+import pyodide.http
 import pandas as pd
-import plotly.express as px
-import matplotlib.pyplot as plt
 from shiny import reactive
 from shiny.express import input, render, ui
-from shinywidgets import render_widget
 
-# create a function to get the exchange rate API URL
+
+# define the URL for the exchange rate API
 @reactive.calc
 def url():
     return f"https://v6.exchangerate-api.com/v6/e4422bdb5030904fad352315/latest/USD"
 
 # fetch the exchange rate dictionary from the API
 @reactive.calc
-def fetch_exchange_rate():
-    response = requests.get(url())
-    if response.status_code == 200:
-        exrate = json.loads(response.text)['conversion_rates']
-        return exrate
-    else:
-        return None
+async def currency_data():
+    if input.input_currency() == "":
+        return
+    response = await pyodide.http.pyfetch(url())
+    if response.status != 200:
+        raise Exception(f"Error fetching {url()}: {response.status}")
+    data = await response.json()
+    return data
 
-# save the exchange rate dictionary to a file
-@reactive.calc
-def save_exchange_rate():
-    exrate = fetch_exchange_rate()
-    if exrate:
-        filename = "exchange_rate.txt"
-        with open(filename, "w") as file:
-            file.write(json.dumps(exrate))
-    return exrate
 
 # create a dataframe from the exchange rate dictionary
 @reactive.calc
-def exchange_rate_df():
-    filename = "exchange_rate.txt"
-    with open(filename, "r") as file:
-        exrate = json.load(file)
-    df = pd.DataFrame(list(exrate.items()), columns=['Currency', 'Rate'])
-    return df
+async def exchange_rate_df():
+    data = await currency_data()
+    if data:
+        rates = data.get("conversion_rates", {})
+        df = pd.DataFrame(list(rates.items()), columns=["Currency", "Rate"])
+        return df
 
-# add another column to the dataframe using the currency to country dictionary
-currency_to_country = {'EUR': 'YT', 'AED': 'AE', 'AFN': 'AF', 'XCD': 'VC', 'ALL': 'AL', 'AMD': 'AM', 'AOA': 'AO', '': 'AQ', 'ARS': 'AR', 'USD': 'VI', 'AUD': 'TV', 'AWG': 'AW', 'AZN': 'AZ', 'BAM': 'BA', 'BBD': 'BB', 'BDT': 'BD', 'XOF': 'TG', 'BGN': 'BG', 'BHD': 'BH', 'BIF': 'BI', 'BMD': 'BM', 'BND': 'BN', 'BOB': 'BO', 'BRL': 'BR', 'BSD': 'BS', 'BTN': 'BT', 'NOK': 'SJ', 'BWP': 'BW', 'BYR': 'BY', 'BZD': 'BZ', 'CAD': 'CA', 'CDF': 'CD', 'XAF': 'TD', 'CHF': 'LI', 'NZD': 'TK', 'CLP': 'CL', 'CNY': 'CN', 'COP': 'CO', 'CRC': 'CR', 'CUP': 'CU', 'CVE': 'CV', 'ANG': 'SX', 'CZK': 'CZ', 'DJF': 'DJ', 'DKK': 'GL', 'DOP': 'DO', 'DZD': 'DZ', 'EGP': 'EG', 'MAD': 'MA', 'ERN': 'ER', 'ETB': 'ET', 'FJD': 'FJ', 'FKP': 'FK', 'GBP': 'JE', 'GEL': 'GE', 'GHS': 'GH', 'GIP': 'GI', 'GMD': 'GM', 'GNF': 'GN', 'GTQ': 'GT', 'GYD': 'GY', 'HKD': 'HK', 'HNL': 'HN', 'HRK': 'HR', 'HTG': 'HT', 'HUF': 'HU', 'IDR': 'ID', 'ILS': 'PS', 'INR': 'IN', 'IQD': 'IQ', 'IRR': 'IR', 'ISK': 'IS', 'JMD': 'JM', 'JOD': 'JO', 'JPY': 'JP', 'KES': 'KE', 'KGS': 'KG', 'KHR': 'KH', 'KMF': 'KM', 'KPW': 'KP', 'KRW': 'KR', 'KWD': 'KW', 'KYD': 'KY', 'KZT': 'KZ', 'LAK': 'LA', 'LBP': 'LB', 'LKR': 'LK', 'LRD': 'LR', 'LSL': 'LS', 'LYD': 'LY', 'MDL': 'MD', 'MGA': 'MG', 'MKD': 'MK', 'MMK': 'MM', 'MNT': 'MN', 'MOP': 'MO', 'MRO': 'MR', 'MUR': 'MU', 'MVR': 'MV', 'MWK': 'MW', 'MXN': 'MX', 'MYR': 'MY', 'MZN': 'MZ', 'NAD': 'NA', 'XPF': 'WF', 'NGN': 'NG', 'NIO': 'NI', 'NPR': 'NP', 'OMR': 'OM', 'PAB': 'PA', 'PEN': 'PE', 'PGK': 'PG', 'PHP': 'PH', 'PKR': 'PK', 'PLN': 'PL', 'PYG': 'PY', 'QAR': 'QA', 'RON': 'RO', 'RSD': 'RS', 'RUB': 'RU', 'RWF': 'RW', 'SAR': 'SA', 'SBD': 'SB', 'SCR': 'SC', 'SDG': 'SD', 'SEK': 'SE', 'SGD': 'SG', 'SHP': 'SH', 'SLL': 'SL', 'SOS': 'SO', 'SRD': 'SR', 'SSP': 'SS', 'STD': 'ST', 'SYP': 'SY', 'SZL': 'SZ', 'THB': 'TH', 'TJS': 'TJ', 'TMT': 'TM', 'TND': 'TN', 'TOP': 'TO', 'TRY': 'TR', 'TTD': 'TT', 'TWD': 'TW', 'TZS': 'TZ', 'UAH': 'UA', 'UGX': 'UG', 'UYU': 'UY', 'UZS': 'UZ', 'VEF': 'VE', 'VND': 'VN', 'VUV': 'VU', 'WST': 'WS', 'YER': 'YE', 'ZAR': 'ZA', 'ZMW': 'ZM', 'ZWL': 'ZW'}
-@reactive.calc
-def exchange_rate_df_with_country():
-    df = exchange_rate_df()
-    df['Country'] = df['Currency'].map(currency_to_country)
-    return df
-
+# create the dashboard layout
 ui.page_opts(
     title="Philip's Simple Currency Conversion Dashboard",
     fillable=True,    
 )
 
-# create the dashboard layout
+# create the sidebar
 with ui.sidebar(bg="#f8f8f8"):  
     "Inputs" 
     ui.input_numeric("number", "Amount of Input Currency", value=1)
@@ -76,32 +56,24 @@ with ui.sidebar(bg="#f8f8f8"):
     ui.a("Exchange Rate API", href="https://www.exchangerate-api.com/", target="_blank")
     ui.a("Country Codes List", href="https://gist.github.com/tiagodealmeida/0b97ccf117252d742dddf098bc6cc58a")
 
-# create the dashboard layout
+# create the columns
 with ui.layout_columns(max_height=400): 
     with ui.value_box():
         "Conversion"
         @render.text
-        def conversion():
-            df = exchange_rate_df()
-            input_currency = input.input_currency()
-            output_currency = input.output_currency()
-            usd_rate_input = df[df['Currency'] == input_currency]['Rate'].values[0]
-            usd_rate_output = df[df['Currency'] == output_currency]['Rate'].values[0]
-            conversion_rate = usd_rate_output / usd_rate_input
-            amount = input.number()
-            conversion = amount * conversion_rate
+        async def conversion():
+            df = await exchange_rate_df()  # Await the asynchronous function
+            input_currency = input.input_currency() # Get the input currency
+            output_currency = input.output_currency() # Get the output currency
+            usd_rate_input = df[df['Currency'] == input_currency]['Rate'].values[0] # Get the rate of the input currency
+            usd_rate_output = df[df['Currency'] == output_currency]['Rate'].values[0] # Get the rate of the output currency
+            conversion_rate = usd_rate_output / usd_rate_input # Calculate the conversion rate
+            amount = input.number() # Get the amount to convert
+            conversion = amount * conversion_rate # Calculate the conversion
             currency_dict = {'AED': 'UAE Dirham', 'AFN': 'Afghan Afghani', 'ALL': 'Albanian Lek', 'AMD': 'Armenian Dram', 'ANG': 'Netherlands Antillian Guilder', 'AOA': 'Angolan Kwanza', 'ARS': 'Argentine Peso', 'AUD': 'Australian Dollar', 'AWG': 'Aruban Florin', 'AZN': 'Azerbaijani Manat', 'BAM': 'Bosnia and Herzegovina Mark', 'BBD': 'Barbados Dollar', 'BDT': 'Bangladeshi Taka', 'BGN': 'Bulgarian Lev', 'BHD': 'Bahraini Dinar', 'BIF': 'Burundian Franc', 'BMD': 'Bermudian Dollar', 'BND': 'Brunei Dollar', 'BOB': 'Bolivian Boliviano', 'BRL': 'Brazilian Real', 'BSD': 'Bahamian Dollar', 'BTN': 'Bhutanese Ngultrum', 'BWP': 'Botswana Pula', 'BYN': 'Belarusian Ruble', 'BZD': 'Belize Dollar', 'CAD': 'Canadian Dollar', 'CDF': 'Congolese Franc', 'CHF': 'Swiss Franc', 'CLP': 'Chilean Peso', 'CNY': 'Chinese Renminbi', 'COP': 'Colombian Peso', 'CRC': 'Costa Rican Colon', 'CUP': 'Cuban Peso', 'CVE': 'Cape Verdean Escudo', 'CZK': 'Czech Koruna', 'DJF': 'Djiboutian Franc', 'DKK': 'Danish Krone', 'DOP': 'Dominican Peso', 'DZD': 'Algerian Dinar', 'EGP': 'Egyptian Pound', 'ERN': 'Eritrean Nakfa', 'ETB': 'Ethiopian Birr', 'EUR': 'Euro', 'FJD': 'Fiji Dollar', 'FKP': 'Falkland Islands Pound', 'FOK': 'Faroese Króna', 'GBP': 'Pound Sterling', 'GEL': 'Georgian Lari', 'GGP': 'Guernsey Pound', 'GHS': 'Ghanaian Cedi', 'GIP': 'Gibraltar Pound', 'GMD': 'Gambian Dalasi', 'GNF': 'Guinean Franc', 'GTQ': 'Guatemalan Quetzal', 'GYD': 'Guyanese Dollar', 'HKD': 'Hong Kong Dollar', 'HNL': 'Honduran Lempira', 'HRK': 'Croatian Kuna', 'HTG': 'Haitian Gourde', 'HUF': 'Hungarian Forint', 'IDR': 'Indonesian Rupiah', 'ILS': 'Israeli New Shekel', 'IMP': 'Manx Pound', 'INR': 'Indian Rupee', 'IQD': 'Iraqi Dinar', 'IRR': 'Iranian Rial', 'ISK': 'Icelandic Króna', 'JEP': 'Jersey Pound', 'JMD': 'Jamaican Dollar', 'JOD': 'Jordanian Dinar', 'JPY': 'Japanese Yen', 'KES': 'Kenyan Shilling', 'KGS': 'Kyrgyzstani Som', 'KHR': 'Cambodian Riel', 'KID': 'Kiribati Dollar', 'KMF': 'Comorian Franc', 'KRW': 'South Korean Won', 'KWD': 'Kuwaiti Dinar', 'KYD': 'Cayman Islands Dollar', 'KZT': 'Kazakhstani Tenge', 'LAK': 'Lao Kip', 'LBP': 'Lebanese Pound', 'LKR': 'Sri Lanka Rupee', 'LRD': 'Liberian Dollar', 'LSL': 'Lesotho Loti', 'LYD': 'Libyan Dinar', 'MAD': 'Moroccan Dirham', 'MDL': 'Moldovan Leu', 'MGA': 'Malagasy Ariary', 'MKD': 'Macedonian Denar', 'MMK': 'Burmese Kyat', 'MNT': 'Mongolian Tögrög', 'MOP': 'Macanese Pataca', 'MRU': 'Mauritanian Ouguiya', 'MUR': 'Mauritian Rupee', 'MVR': 'Maldivian Rufiyaa', 'MWK': 'Malawian Kwacha', 'MXN': 'Mexican Peso', 'MYR': 'Malaysian Ringgit', 'MZN': 'Mozambican Metical', 'NAD': 'Namibian Dollar', 'NGN': 'Nigerian Naira', 'NIO': 'Nicaraguan Córdoba', 'NOK': 'Norwegian Krone', 'NPR': 'Nepalese Rupee', 'NZD': 'New Zealand Dollar', 'OMR': 'Omani Rial', 'PAB': 'Panamanian Balboa', 'PEN': 'Peruvian Sol', 'PGK': 'Papua New Guinean Kina', 'PHP': 'Philippine Peso', 'PKR': 'Pakistani Rupee', 'PLN': 'Polish Złoty', 'PYG': 'Paraguayan Guaraní', 'QAR': 'Qatari Riyal', 'RON': 'Romanian Leu', 'RSD': 'Serbian Dinar', 'RUB': 'Russian Ruble', 'RWF': 'Rwandan Franc', 'SAR': 'Saudi Riyal', 'SBD': 'Solomon Islands Dollar', 'SCR': 'Seychellois Rupee', 'SDG': 'Sudanese Pound', 'SEK': 'Swedish Krona', 'SGD': 'Singapore Dollar', 'SHP': 'Saint Helena Pound', 'SLE': 'Sierra Leonean Leone', 'SOS': 'Somali Shilling', 'SRD': 'Surinamese Dollar', 'SSP': 'South Sudanese Pound', 'STN': 'São Tomé and Príncipe Dobra', 'SYP': 'Syrian Pound', 'SZL': 'Eswatini Lilangeni', 'THB': 'Thai Baht', 'TJS': 'Tajikistani Somoni', 'TMT': 'Turkmenistan Manat', 'TND': 'Tunisian Dinar', 'TOP': 'Tongan Paʻanga', 'TRY': 'Turkish Lira', 'TTD': 'Trinidad and Tobago Dollar', 'TVD': 'Tuvaluan Dollar', 'TWD': 'New Taiwan Dollar', 'TZS': 'Tanzanian Shilling', 'UAH': 'Ukrainian Hryvnia', 'UGX': 'Ugandan Shilling', 'USD': 'United States Dollar', 'UYU': 'Uruguayan Peso', 'UZS': "Uzbekistani So'm", 'VES': 'Venezuelan Bolívar Soberano', 'VND': 'Vietnamese Đồng', 'VUV': 'Vanuatu Vatu', 'WST': 'Samoan Tālā', 'XAF': 'Central African CFA Franc', 'XCD': 'East Caribbean Dollar', 'XDR': 'Special Drawing Rights', 'XOF': 'West African CFA franc', 'XPF': 'CFP Franc', 'YER': 'Yemeni Rial', 'ZAR': 'South African Rand', 'ZMW': 'Zambian Kwacha', 'ZWL': 'Zimbabwean Dollar'}
-            input_currency_name = currency_dict[input_currency]
-            output_currency_name = currency_dict[output_currency]
-            return f"{amount} {input_currency_name} is equal to {conversion:.4f} {output_currency_name}"
-    
-    with ui.card():
-        "All Exchange Rates"
-        @render.data_frame
-        async def table():
-            df = exchange_rate_df()
-            df.style.set_table_styles([{'selector': 'th', 'props': [('font-size', '0.75em')]}, {'selector': 'td', 'props': [('font-size', '0.75em')]}])
-            return df
+            input_currency_name = currency_dict[input_currency] # Get the name of the input currency
+            output_currency_name = currency_dict[output_currency] # Get the name of the output currency
+            return f"{amount} {input_currency_name} is equal to {conversion:.4f} {output_currency_name}" # Return the conversion
     
     with ui.value_box():
         "Input Currency Information"
@@ -109,10 +81,10 @@ with ui.layout_columns(max_height=400):
         def currency_symbol():
             currency_data = {'USD': '$', 'EUR': '€', 'AED': 'د.إ', 'AFN': '؋', 'ALL': 'L', 'AMD': '֏', 'ANG': 'ƒ', 'AOA': 'Kz', 'ARS': '$', 'AUD': '$', 'AWG': 'ƒ', 'AZN': '₼', 'BAM': 'KM', 'BBD': '$', 'BDT': '৳', 'BGN': 'лв.', 'BHD': '.د.ب', 'BIF': 'Fr', 'BMD': '$', 'BND': '$', 'BOB': 'Bs.', 'BRL': 'R$', 'BSD': '$', 'BTN': 'Nu.', 'BWP': 'P', 'BYN': 'Br', 'BZD': '$', 'CAD': '$', 'CDF': 'Fr', 'CHF': 'Fr.', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'CUP': '$', 'CVE': '$', 'CZK': 'Kč', 'DJF': 'Fr', 'DKK': 'kr', 'DOP': 'RD$', 'DZD': 'د.ج', 'EGP': '£', 'ERN': 'Nfk', 'ETB': 'Br', 'FJD': '$', 'FKP': '£', 'GBP': '£', 'GEL': '₾', 'GHS': '₵', 'GIP': '£', 'GMD': 'D', 'GNF': 'Fr', 'GTQ': 'Q', 'GYD': '$', 'HKD': '$', 'HNL': 'L', 'HRK': 'kn', 'HTG': 'G', 'HUF': 'Ft', 'IDR': 'Rp', 'ILS': '₪', 'INR': '₹', 'IQD': 'ع.د', 'IRR': '﷼', 'ISK': 'kr', 'JMD': '$', 'JOD': 'د.ا', 'JPY': '¥', 'KES': 'Sh', 'KGS': 'с', 'KHR': '៛', 'KMF': 'Fr', 'KPW': '₩', 'KRW': '₩', 'KWD': 'د.ك', 'KYD': '$', 'KZT': '₸', 'LAK': '₭', 'LBP': 'ل.ل', 'LKR': 'Rs', 'LRD': '$', 'LSL': 'L', 'LYD': 'ل.د', 'MAD': 'د.م.', 'MDL': 'L', 'MGA': 'Ar', 'MKD': 'ден', 'MMK': 'Ks', 'MNT': '₮', 'MOP': 'MOP$', 'MRU': 'UM', 'MUR': '₨', 'MVR': '.ރ', 'MWK': 'MK', 'MXN': '$', 'MYR': 'RM', 'MZN': 'MT', 'NAD': '$', 'NGN': '₦', 'NIO': 'C$', 'NOK': 'kr', 'NPR': 'रू', 'NZD': '$', 'OMR': 'ر.ع.', 'PAB': 'B/.', 'PEN': 'S/.', 'PGK': 'K', 'PHP': '₱', 'PKR': '₨', 'PLN': 'zł', 'PYG': '₲', 'QAR': 'ر.ق', 'RON': 'lei', 'RSD': 'дин.', 'RUB': '₽', 'RWF': 'Fr', 'SAR': '﷼', 'SBD': '$', 'SCR': '₨', 'SDG': 'ج.س.', 'SEK': 'kr', 'SGD': '$', 'SHP': '£', 'SLL': 'Le', 'SOS': 'Sh', 'SRD': '$', 'SSP': '£', 'STN': 'Db', 'SYP': '£', 'SZL': 'L', 'THB': '฿', 'TJS': 'с.', 'TMT': 'm.', 'TND': 'د.ت', 'TOP': 'T$', 'TRY': '₺', 'TTD': '$', 'TWD': '$', 'TZS': 'Sh', 'UAH': '₴', 'UGX': 'Sh', 'UYU': '$', 'UZS': 'Sʻ', 'VES': 'Bs.', 'VND': '₫', 'VUV': 'Vt', 'WST': 'T', 'XAF': 'Fr', 'XCD': '$', 'XOF': 'Fr', 'XPF': '₣', 'YER': '﷼', 'ZAR': 'R', 'ZMW': 'ZK', 'ZWL': '$'}
             currency_dict = {'AED': 'UAE Dirham', 'AFN': 'Afghan Afghani', 'ALL': 'Albanian Lek', 'AMD': 'Armenian Dram', 'ANG': 'Netherlands Antillian Guilder', 'AOA': 'Angolan Kwanza', 'ARS': 'Argentine Peso', 'AUD': 'Australian Dollar', 'AWG': 'Aruban Florin', 'AZN': 'Azerbaijani Manat', 'BAM': 'Bosnia and Herzegovina Mark', 'BBD': 'Barbados Dollar', 'BDT': 'Bangladeshi Taka', 'BGN': 'Bulgarian Lev', 'BHD': 'Bahraini Dinar', 'BIF': 'Burundian Franc', 'BMD': 'Bermudian Dollar', 'BND': 'Brunei Dollar', 'BOB': 'Bolivian Boliviano', 'BRL': 'Brazilian Real', 'BSD': 'Bahamian Dollar', 'BTN': 'Bhutanese Ngultrum', 'BWP': 'Botswana Pula', 'BYN': 'Belarusian Ruble', 'BZD': 'Belize Dollar', 'CAD': 'Canadian Dollar', 'CDF': 'Congolese Franc', 'CHF': 'Swiss Franc', 'CLP': 'Chilean Peso', 'CNY': 'Chinese Renminbi', 'COP': 'Colombian Peso', 'CRC': 'Costa Rican Colon', 'CUP': 'Cuban Peso', 'CVE': 'Cape Verdean Escudo', 'CZK': 'Czech Koruna', 'DJF': 'Djiboutian Franc', 'DKK': 'Danish Krone', 'DOP': 'Dominican Peso', 'DZD': 'Algerian Dinar', 'EGP': 'Egyptian Pound', 'ERN': 'Eritrean Nakfa', 'ETB': 'Ethiopian Birr', 'EUR': 'Euro', 'FJD': 'Fiji Dollar', 'FKP': 'Falkland Islands Pound', 'FOK': 'Faroese Króna', 'GBP': 'Pound Sterling', 'GEL': 'Georgian Lari', 'GGP': 'Guernsey Pound', 'GHS': 'Ghanaian Cedi', 'GIP': 'Gibraltar Pound', 'GMD': 'Gambian Dalasi', 'GNF': 'Guinean Franc', 'GTQ': 'Guatemalan Quetzal', 'GYD': 'Guyanese Dollar', 'HKD': 'Hong Kong Dollar', 'HNL': 'Honduran Lempira', 'HRK': 'Croatian Kuna', 'HTG': 'Haitian Gourde', 'HUF': 'Hungarian Forint', 'IDR': 'Indonesian Rupiah', 'ILS': 'Israeli New Shekel', 'IMP': 'Manx Pound', 'INR': 'Indian Rupee', 'IQD': 'Iraqi Dinar', 'IRR': 'Iranian Rial', 'ISK': 'Icelandic Króna', 'JEP': 'Jersey Pound', 'JMD': 'Jamaican Dollar', 'JOD': 'Jordanian Dinar', 'JPY': 'Japanese Yen', 'KES': 'Kenyan Shilling', 'KGS': 'Kyrgyzstani Som', 'KHR': 'Cambodian Riel', 'KID': 'Kiribati Dollar', 'KMF': 'Comorian Franc', 'KRW': 'South Korean Won', 'KWD': 'Kuwaiti Dinar', 'KYD': 'Cayman Islands Dollar', 'KZT': 'Kazakhstani Tenge', 'LAK': 'Lao Kip', 'LBP': 'Lebanese Pound', 'LKR': 'Sri Lanka Rupee', 'LRD': 'Liberian Dollar', 'LSL': 'Lesotho Loti', 'LYD': 'Libyan Dinar', 'MAD': 'Moroccan Dirham', 'MDL': 'Moldovan Leu', 'MGA': 'Malagasy Ariary', 'MKD': 'Macedonian Denar', 'MMK': 'Burmese Kyat', 'MNT': 'Mongolian Tögrög', 'MOP': 'Macanese Pataca', 'MRU': 'Mauritanian Ouguiya', 'MUR': 'Mauritian Rupee', 'MVR': 'Maldivian Rufiyaa', 'MWK': 'Malawian Kwacha', 'MXN': 'Mexican Peso', 'MYR': 'Malaysian Ringgit', 'MZN': 'Mozambican Metical', 'NAD': 'Namibian Dollar', 'NGN': 'Nigerian Naira', 'NIO': 'Nicaraguan Córdoba', 'NOK': 'Norwegian Krone', 'NPR': 'Nepalese Rupee', 'NZD': 'New Zealand Dollar', 'OMR': 'Omani Rial', 'PAB': 'Panamanian Balboa', 'PEN': 'Peruvian Sol', 'PGK': 'Papua New Guinean Kina', 'PHP': 'Philippine Peso', 'PKR': 'Pakistani Rupee', 'PLN': 'Polish Złoty', 'PYG': 'Paraguayan Guaraní', 'QAR': 'Qatari Riyal', 'RON': 'Romanian Leu', 'RSD': 'Serbian Dinar', 'RUB': 'Russian Ruble', 'RWF': 'Rwandan Franc', 'SAR': 'Saudi Riyal', 'SBD': 'Solomon Islands Dollar', 'SCR': 'Seychellois Rupee', 'SDG': 'Sudanese Pound', 'SEK': 'Swedish Krona', 'SGD': 'Singapore Dollar', 'SHP': 'Saint Helena Pound', 'SLE': 'Sierra Leonean Leone', 'SOS': 'Somali Shilling', 'SRD': 'Surinamese Dollar', 'SSP': 'South Sudanese Pound', 'STN': 'São Tomé and Príncipe Dobra', 'SYP': 'Syrian Pound', 'SZL': 'Eswatini Lilangeni', 'THB': 'Thai Baht', 'TJS': 'Tajikistani Somoni', 'TMT': 'Turkmenistan Manat', 'TND': 'Tunisian Dinar', 'TOP': 'Tongan Paʻanga', 'TRY': 'Turkish Lira', 'TTD': 'Trinidad and Tobago Dollar', 'TVD': 'Tuvaluan Dollar', 'TWD': 'New Taiwan Dollar', 'TZS': 'Tanzanian Shilling', 'UAH': 'Ukrainian Hryvnia', 'UGX': 'Ugandan Shilling', 'USD': 'United States Dollar', 'UYU': 'Uruguayan Peso', 'UZS': "Uzbekistani So'm", 'VES': 'Venezuelan Bolívar Soberano', 'VND': 'Vietnamese Đồng', 'VUV': 'Vanuatu Vatu', 'WST': 'Samoan Tālā', 'XAF': 'Central African CFA Franc', 'XCD': 'East Caribbean Dollar', 'XDR': 'Special Drawing Rights', 'XOF': 'West African CFA franc', 'XPF': 'CFP Franc', 'YER': 'Yemeni Rial', 'ZAR': 'South African Rand', 'ZMW': 'Zambian Kwacha', 'ZWL': 'Zimbabwean Dollar'}
-            input_currency = input.input_currency()
-            input_currency_name = currency_dict[input_currency]
-            symbol = currency_data.get(input_currency, "N/A")
-            return f"The symbol for {input_currency_name} is: {symbol}"
+            input_currency = input.input_currency() # Get the input currency
+            input_currency_name = currency_dict[input_currency] # Get the name of the input currency
+            symbol = currency_data.get(input_currency, "N/A") # Get the symbol of the input currency
+            return f"The symbol for {input_currency_name} is: {symbol}" # Return the symbol of the input currency
     
     with ui.value_box():
         "Output Currency Information"
@@ -120,10 +92,11 @@ with ui.layout_columns(max_height=400):
         def currency_symbol2():
             currency_data = {'USD': '$', 'EUR': '€', 'AED': 'د.إ', 'AFN': '؋', 'ALL': 'L', 'AMD': '֏', 'ANG': 'ƒ', 'AOA': 'Kz', 'ARS': '$', 'AUD': '$', 'AWG': 'ƒ', 'AZN': '₼', 'BAM': 'KM', 'BBD': '$', 'BDT': '৳', 'BGN': 'лв.', 'BHD': '.د.ب', 'BIF': 'Fr', 'BMD': '$', 'BND': '$', 'BOB': 'Bs.', 'BRL': 'R$', 'BSD': '$', 'BTN': 'Nu.', 'BWP': 'P', 'BYN': 'Br', 'BZD': '$', 'CAD': '$', 'CDF': 'Fr', 'CHF': 'Fr.', 'CLP': '$', 'CNY': '¥', 'COP': '$', 'CRC': '₡', 'CUP': '$', 'CVE': '$', 'CZK': 'Kč', 'DJF': 'Fr', 'DKK': 'kr', 'DOP': 'RD$', 'DZD': 'د.ج', 'EGP': '£', 'ERN': 'Nfk', 'ETB': 'Br', 'FJD': '$', 'FKP': '£', 'GBP': '£', 'GEL': '₾', 'GHS': '₵', 'GIP': '£', 'GMD': 'D', 'GNF': 'Fr', 'GTQ': 'Q', 'GYD': '$', 'HKD': '$', 'HNL': 'L', 'HRK': 'kn', 'HTG': 'G', 'HUF': 'Ft', 'IDR': 'Rp', 'ILS': '₪', 'INR': '₹', 'IQD': 'ع.د', 'IRR': '﷼', 'ISK': 'kr', 'JMD': '$', 'JOD': 'د.ا', 'JPY': '¥', 'KES': 'Sh', 'KGS': 'с', 'KHR': '៛', 'KMF': 'Fr', 'KPW': '₩', 'KRW': '₩', 'KWD': 'د.ك', 'KYD': '$', 'KZT': '₸', 'LAK': '₭', 'LBP': 'ل.ل', 'LKR': 'Rs', 'LRD': '$', 'LSL': 'L', 'LYD': 'ل.د', 'MAD': 'د.م.', 'MDL': 'L', 'MGA': 'Ar', 'MKD': 'ден', 'MMK': 'Ks', 'MNT': '₮', 'MOP': 'MOP$', 'MRU': 'UM', 'MUR': '₨', 'MVR': '.ރ', 'MWK': 'MK', 'MXN': '$', 'MYR': 'RM', 'MZN': 'MT', 'NAD': '$', 'NGN': '₦', 'NIO': 'C$', 'NOK': 'kr', 'NPR': 'रू', 'NZD': '$', 'OMR': 'ر.ع.', 'PAB': 'B/.', 'PEN': 'S/.', 'PGK': 'K', 'PHP': '₱', 'PKR': '₨', 'PLN': 'zł', 'PYG': '₲', 'QAR': 'ر.ق', 'RON': 'lei', 'RSD': 'дин.', 'RUB': '₽', 'RWF': 'Fr', 'SAR': '﷼', 'SBD': '$', 'SCR': '₨', 'SDG': 'ج.س.', 'SEK': 'kr', 'SGD': '$', 'SHP': '£', 'SLL': 'Le', 'SOS': 'Sh', 'SRD': '$', 'SSP': '£', 'STN': 'Db', 'SYP': '£', 'SZL': 'L', 'THB': '฿', 'TJS': 'с.', 'TMT': 'm.', 'TND': 'د.ت', 'TOP': 'T$', 'TRY': '₺', 'TTD': '$', 'TWD': '$', 'TZS': 'Sh', 'UAH': '₴', 'UGX': 'Sh', 'USD': 'United States Dollar', 'UYU': '$', 'UZS': "Uzbekistani So'm", 'VES': 'Bs.', 'VND': '₫', 'VUV': 'Vt', 'WST': 'T', 'XAF': 'Fr', 'XCD': '$', 'XOF': 'Fr', 'XPF': '₣', 'YER': '﷼', 'ZAR': 'R', 'ZMW': 'ZK', 'ZWL': '$'}
             currency_dict = {'AED': 'UAE Dirham', 'AFN': 'Afghan Afghani', 'ALL': 'Albanian Lek', 'AMD': 'Armenian Dram', 'ANG': 'Netherlands Antillian Guilder', 'AOA': 'Angolan Kwanza', 'ARS': 'Argentine Peso', 'AUD': 'Australian Dollar', 'AWG': 'Aruban Florin', 'AZN': 'Azerbaijani Manat', 'BAM': 'Bosnia and Herzegovina Mark', 'BBD': 'Barbados Dollar', 'BDT': 'Bangladeshi Taka', 'BGN': 'Bulgarian Lev', 'BHD': 'Bahraini Dinar', 'BIF': 'Burundian Franc', 'BMD': 'Bermudian Dollar', 'BND': 'Brunei Dollar', 'BOB': 'Bolivian Boliviano', 'BRL': 'Brazilian Real', 'BSD': 'Bahamian Dollar', 'BTN': 'Bhutanese Ngultrum', 'BWP': 'Botswana Pula', 'BYN': 'Belarusian Ruble', 'BZD': 'Belize Dollar', 'CAD': 'Canadian Dollar', 'CDF': 'Congolese Franc', 'CHF': 'Swiss Franc', 'CLP': 'Chilean Peso', 'CNY': 'Chinese Renminbi', 'COP': 'Colombian Peso', 'CRC': 'Costa Rican Colon', 'CUP': 'Cuban Peso', 'CVE': 'Cape Verdean Escudo', 'CZK': 'Czech Koruna', 'DJF': 'Djiboutian Franc', 'DKK': 'Danish Krone', 'DOP': 'Dominican Peso', 'DZD': 'Algerian Dinar', 'EGP': 'Egyptian Pound', 'ERN': 'Eritrean Nakfa', 'ETB': 'Ethiopian Birr', 'EUR': 'Euro', 'FJD': 'Fiji Dollar', 'FKP': 'Falkland Islands Pound', 'FOK': 'Faroese Króna', 'GBP': 'Pound Sterling', 'GEL': 'Georgian Lari', 'GGP': 'Guernsey Pound', 'GHS': 'Ghanaian Cedi', 'GIP': 'Gibraltar Pound', 'GMD': 'Gambian Dalasi', 'GNF': 'Guinean Franc', 'GTQ': 'Guatemalan Quetzal', 'GYD': 'Guyanese Dollar', 'HKD': 'Hong Kong Dollar', 'HNL': 'Honduran Lempira', 'HRK': 'Croatian Kuna', 'HTG': 'Haitian Gourde', 'HUF': 'Hungarian Forint', 'IDR': 'Indonesian Rupiah', 'ILS': 'Israeli New Shekel', 'IMP': 'Manx Pound', 'INR': 'Indian Rupee', 'IQD': 'Iraqi Dinar', 'IRR': 'Iranian Rial', 'ISK': 'Icelandic Króna', 'JEP': 'Jersey Pound', 'JMD': 'Jamaican Dollar', 'JOD': 'Jordanian Dinar', 'JPY': 'Japanese Yen', 'KES': 'Kenyan Shilling', 'KGS': 'Kyrgyzstani Som', 'KHR': 'Cambodian Riel', 'KID': 'Kiribati Dollar', 'KMF': 'Comorian Franc', 'KRW': 'South Korean Won', 'KWD': 'Kuwaiti Dinar', 'KYD': 'Cayman Islands Dollar', 'KZT': 'Kazakhstani Tenge', 'LAK': 'Lao Kip', 'LBP': 'Lebanese Pound', 'LKR': 'Sri Lanka Rupee', 'LRD': 'Liberian Dollar', 'LSL': 'Lesotho Loti', 'LYD': 'Libyan Dinar', 'MAD': 'Moroccan Dirham', 'MDL': 'Moldovan Leu', 'MGA': 'Malagasy Ariary', 'MKD': 'Macedonian Denar', 'MMK': 'Burmese Kyat', 'MNT': 'Mongolian Tögrög', 'MOP': 'Macanese Pataca', 'MRU': 'Mauritanian Ouguiya', 'MUR': 'Mauritian Rupee', 'MVR': 'Maldivian Rufiyaa', 'MWK': 'Malawian Kwacha', 'MXN': 'Mexican Peso', 'MYR': 'Malaysian Ringgit', 'MZN': 'Mozambican Metical', 'NAD': 'Namibian Dollar', 'NGN': 'Nigerian Naira', 'NIO': 'Nicaraguan Córdoba', 'NOK': 'Norwegian Krone', 'NPR': 'Nepalese Rupee', 'NZD': 'New Zealand Dollar', 'OMR': 'Omani Rial', 'PAB': 'Panamanian Balboa', 'PEN': 'Peruvian Sol', 'PGK': 'Papua New Guinean Kina', 'PHP': 'Philippine Peso', 'PKR': 'Pakistani Rupee', 'PLN': 'Polish Złoty', 'PYG': 'Paraguayan Guaraní', 'QAR': 'Qatari Riyal', 'RON': 'Romanian Leu', 'RSD': 'Serbian Dinar', 'RUB': 'Russian Ruble', 'RWF': 'Rwandan Franc', 'SAR': 'Saudi Riyal', 'SBD': 'Solomon Islands Dollar', 'SCR': 'Seychellois Rupee', 'SDG': 'Sudanese Pound', 'SEK': 'Swedish Krona', 'SGD': 'Singapore Dollar', 'SHP': 'Saint Helena Pound', 'SLE': 'Sierra Leonean Leone', 'SOS': 'Somali Shilling', 'SRD': 'Surinamese Dollar', 'SSP': 'South Sudanese Pound', 'STN': 'São Tomé and Príncipe Dobra', 'SYP': 'Syrian Pound', 'SZL': 'Eswatini Lilangeni', 'THB': 'Thai Baht', 'TJS': 'Tajikistani Somoni', 'TMT': 'Turkmenistan Manat', 'TND': 'Tunisian Dinar', 'TOP': 'Tongan Paʻanga', 'TRY': 'Turkish Lira', 'TTD': 'Trinidad and Tobago Dollar', 'TVD': 'Tuvaluan Dollar', 'TWD': 'New Taiwan Dollar', 'TZS': 'Tanzanian Shilling', 'UAH': 'Ukrainian Hryvnia', 'UGX': 'Ugandan Shilling', 'USD': 'United States Dollar', 'UYU': 'Uruguayan Peso', 'UZS': "Uzbekistani So'm", 'VES': 'Venezuelan Bolívar Soberano', 'VND': 'Vietnamese Đồng', 'VUV': 'Vanuatu Vatu', 'WST': 'Samoan Tālā', 'XAF': 'Central African CFA Franc', 'XCD': 'East Caribbean Dollar', 'XDR': 'Special Drawing Rights', 'XOF': 'West African CFA franc', 'XPF': 'CFP Franc', 'YER': 'Yemeni Rial', 'ZAR': 'South African Rand', 'ZMW': 'Zambian Kwacha', 'ZWL': 'Zimbabwean Dollar'}
-            output_currency = input.output_currency()
-            output_currency_name = currency_dict[output_currency]
-            symbol = currency_data.get(output_currency, "N/A")
-            return f"The symbol for {output_currency_name} is: {symbol}"
+            output_currency = input.output_currency() # Get the output currency
+            output_currency_name = currency_dict[output_currency] # Get the name of the output currency
+            symbol = currency_data.get(output_currency, "N/A") # Get the symbol of the output currency
+            return f"The symbol for {output_currency_name} is: {symbol}" # Return the symbol of the output currency
+
 
 
 
